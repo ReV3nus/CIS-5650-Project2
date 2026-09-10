@@ -4,6 +4,8 @@ set(headers
     "naive.h"
     "efficient.h"
     "thrust.h"
+    "radix.h"
+    "sharedmem.h"
     )
 
 set(sources
@@ -12,6 +14,8 @@ set(sources
     "naive.cu"
     "efficient.cu"
     "thrust.cu"
+    "radix.cu"
+    "sharedmem.cu"
     )
 
 list(SORT headers)
@@ -30,3 +34,11 @@ else()
 endif()
 target_compile_options(stream_compaction PRIVATE "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>")
 target_compile_options(stream_compaction PRIVATE "$<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo;-src-in-ptx>")
+if(MSVC)
+    # CUDA 13.x's CCCL/Thrust headers require MSVC's conforming preprocessor.
+    target_compile_options(stream_compaction PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Zc:preprocessor>")
+endif()
+
+# Overridable at configure time (-DBLOCK_SIZE=256) to sweep block sizes.
+set(BLOCK_SIZE 128 CACHE STRING "CUDA thread block size used by naive/efficient/radix/sharedmem")
+target_compile_definitions(stream_compaction PRIVATE BLOCK_SIZE=${BLOCK_SIZE})
